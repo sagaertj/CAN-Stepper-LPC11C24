@@ -1,0 +1,56 @@
+The CAN project is a simple demo program for the NXP 'LPC11C14' 
+microcontroller using Keil 'MCB1000' Evaluation Board, compliant 
+to Cortex Microcontroller Software Interface Standard (CMSIS v2.0)
+and demonstrates the use of the CAN peripheral.
+
+Example functionality: 
+ - Clock Settings:
+   - XTAL   =  12 MHz
+   - SYSPLL =  48 MHz
+
+ - CAN controller speed: 500 kbits
+ - send converted analog value in first byte in CAN message
+ - display received byte on LEDs
+ - output transmitted and received bytes on serial port
+ - UART settings: 115200 baud, 8 data bits, no parity, 1 stop bit
+
+This example shows how to use CAN peripheral and how to 
+simulate analog input in uVision.
+
+You may change the value of analog input with potentiometer
+
+
+The CAN example is available in different targets:
+
+  LPC11C14 RAM:   runs from Internal Flash
+                  (used for target debugging)
+
+  LPC11C14 Flash: runs from Internal Flash
+                  (used for production or target debugging)
+
+
+
+
+
+
+
+
+Home 1	P3_2
+Home 2  P1_10
+
+Step CT32B1M0 (P1_1)
+dir P3_3
+
+SLEEP	P3_1
+STPDIS	P2_6
+
+
+Led1 P0_7
+Led2 P3_0
+Led3 P1_8
+
+F1  P2_7
+F2  P2_8
+F3  P2_10
+
+

@@ -1,0 +1,15 @@
+/Flash/
+/RAM/
+/*.dep
+/*.o
+/*.crf
+/*.d
+/*.bak
+/*.sct
+/*.uvopt
+/*.lnp
+/*.hex
+/*.axf
+/*.uvgui.Johan
+/*.htm
+/*.uvgui
