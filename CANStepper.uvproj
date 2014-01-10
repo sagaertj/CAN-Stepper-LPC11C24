@@ -496,6 +496,41 @@
             </File>
           </Files>
         </Group>
+        <Group>
+          <GroupName>Headers</GroupName>
+          <Files>
+            <File>
+              <FileName>CAN.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\CAN.h</FilePath>
+            </File>
+            <File>
+              <FileName>constan.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\constan.h</FilePath>
+            </File>
+            <File>
+              <FileName>iap.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\iap.h</FilePath>
+            </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>types.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\types.h</FilePath>
+            </File>
+          </Files>
+        </Group>
       </Groups>
     </Target>
     <Target>
@@ -949,6 +984,41 @@
               <FileName>Abstract.txt</FileName>
               <FileType>5</FileType>
               <FilePath>.\Abstract.txt</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Headers</GroupName>
+          <Files>
+            <File>
+              <FileName>CAN.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\CAN.h</FilePath>
+            </File>
+            <File>
+              <FileName>constan.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\constan.h</FilePath>
+            </File>
+            <File>
+              <FileName>iap.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\iap.h</FilePath>
+            </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>types.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\types.h</FilePath>
             </File>
           </Files>
         </Group>
