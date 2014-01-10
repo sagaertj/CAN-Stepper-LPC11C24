@@ -58,7 +58,7 @@ typedef struct
 
 typedef struct
 {
-	long accel ;
+	long accel;
 	long decel;
 	long targetpos;
 	long newtargetpos;

@@ -25,6 +25,8 @@
 
 #include "motor.h"
 
+#include "CAN_Cmds.h"
+
 #define  LED1OFF		LPC_GPIO0->DATA |= (1UL << 7)
 #define  LED1ON		LPC_GPIO0->DATA &= ~(1UL << 7)
 #define  LED2OFF		LPC_GPIO3->DATA |= (1UL << 0)

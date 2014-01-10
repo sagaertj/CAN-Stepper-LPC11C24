@@ -13,7 +13,6 @@ _INC volatile status_t stepstat ;
 
 _INC volatile systemcfg_t systemconfig ;
 
-_INC long val1;
 _INC long val1t;
 
 #undef _INC

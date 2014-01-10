@@ -3,23 +3,18 @@
 #include <string.h>
 #include "LPC11xx.h"                            /* LPC11xx definitions        */
 
-//#include "LPC2103.H"                       /* LPC21xx definitions  */
-
 #include "constan.h"
 #include "types.h"
 #include "motor.h"
 #include "main.h"
-//#include "isr.h"
 
 volatile long timer1count;
 volatile int  timer1done;
 
-
 volatile status_t stepstat ;
 volatile systemcfg_t systemconfig ;
-long val1;
 
-void DoMotorRun(void);
+//#define USEV1
 
 void setup_motorIO(void)
 {
@@ -56,9 +51,6 @@ void setup_motorIO(void)
 	
 	LPC_TMR32B1->EMR=0 ;	
 
-	// match 02 reset on match
-	//T0MCR=MCR_MR2R ;
-	
 	// reset on match en interrupt
 	LPC_TMR32B1->MCR=MCR_MR0R | MCR_MR0I ;
 	
@@ -66,11 +58,6 @@ void setup_motorIO(void)
 	LPC_TMR32B1->MR0=999;
 	
 	LPC_TMR32B1->TCR=TCR_RESET ;	//stop & reset 
-	
-	//VICVectCntl0 = IRQSLOT_EN | IRQ_TIMER0; 
-	//VICVectAddr0 = (unsigned long) speed_cntr_TIMER1_COMPA_interrupt; 
-	//VICVectAddr0 = (unsigned long) ReloadTimer0; 
-	//VICIntEnable = TIMER0  ;    // Enable  Interrupt
 	
 	//enable TIMER_32_1_IRQ in NVIC
 	NVIC_EnableIRQ(TIMER_32_1_IRQn);
@@ -93,6 +80,7 @@ void init_motorvars(void)
 	
 	stepstat.toholdpowertimer=0;
 }
+
 void process_serialdata(char * serial_buffer)
 {
 	char *token;
@@ -480,10 +468,6 @@ void DoContineousRun(enum DIRECTION dir)
 void DoMotorRun(void)
 {
 	long relativesteps;
-
-	long accel=stepstat.accel;
-	long decel=stepstat.decel;
-	unsigned long vmax=stepstat.v_max;
 	  
 	//! Number of steps before we must start deceleration (if accel does not hit max speed).
 	unsigned long accel_lim;
@@ -520,7 +504,7 @@ void DoMotorRun(void)
 	Set_MotorPower(FULLPOWER);
 	
 	//berekenen en onthouden
-	stepstat.start_step_delay = (T1_FREQ_148 * sqrt(A_SQ / accel)    )/100;
+	stepstat.start_step_delay = (T1_FREQ_148 * sqrt(A_SQ / stepstat.accel)    )/100;
 	stepstat.step_delay=stepstat.start_step_delay;
 	
 	// Reset counter.
@@ -551,7 +535,7 @@ void DoMotorRun(void)
 		//stepstat.min_delay = T1_FREQ / vmax; //maw de max snelheid in usteps/s
 		
 		//orig
-		stepstat.min_delay = A_T_x100 / vmax; //maw de max snelheid in usteps/s
+		stepstat.min_delay = A_T_x100 / stepstat.v_max; //maw de max snelheid in usteps/s
 
 		//	printf("stepstat.min_delay=%i\n\r",stepstat.min_delay);
 		
@@ -561,7 +545,7 @@ void DoMotorRun(void)
 
 		// Find out after how many STEPS does the speed hit the max speed limit.
 		// max_s_lim = speed^2 / (2*alpha*accel)
-		stepstat.max_s_lim = (long)vmax*vmax/(long)(((long)A_x20000*accel)/100);
+		stepstat.max_s_lim = (long)stepstat.v_max*stepstat.v_max/(long)(((long)A_x20000*stepstat.accel)/100);
 		// If we hit max speed limit before 0,5 step it will round to 0.
 		// But in practice we need to move atleast 1 step to get any speed at all.
 		if(stepstat.max_s_lim == 0)
@@ -576,7 +560,7 @@ void DoMotorRun(void)
 		//accel_lim = ((long)step*decel) / (accel+decel);	//	step * 180000 / 185000
 
 		//voorkomt overflow door gebruik 64 bit long long
-		accel_lim = ((long long)relativesteps*decel) / (accel+decel);	//	(4000 * 180000) / (5000 + 180000 )
+		accel_lim = ((long long)relativesteps*stepstat.decel) / (stepstat.accel+stepstat.decel);	//	(4000 * 180000) / (5000 + 180000 )
 
 		// We must accelrate at least 1 step before we can start deceleration.
 		if(accel_lim == 0)
@@ -593,7 +577,7 @@ void DoMotorRun(void)
  	   }
 	   else
 		{
-			stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);	//trapezium profiel
+			stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);	//trapezium profiel
 			//printf("STEPstat.decel_val=%i\n\r",stepstat.decel_val);
 	   }
 
@@ -646,9 +630,7 @@ void DoMotorRun2(void)
 {
 	long relativesteps=stepstat.targetpos-stepstat.currentpos;
 
-	long accel=stepstat.accel;
-	long decel=stepstat.decel;
-	unsigned int vmax=stepstat.v_max;
+	//unsigned int vmax=stepstat.v_max;
 	  
 	//! Number of steps before we hit max speed.
 	//unsigned long max_s_lim;
@@ -700,7 +682,7 @@ void DoMotorRun2(void)
   	// Only move if number of steps to move is not zero.
   	else// if(step != 0)
   	{
-		accel_lim = ((long long)relativesteps*decel) / (accel+decel);	//	(4000 * 180000) / (5000 + 180000 )
+		accel_lim = ((long long)relativesteps*stepstat.decel) / (stepstat.accel+stepstat.decel);	//	(4000 * 180000) / (5000 + 180000 )
 
 		// We must accelrate at least 1 step before we can start deceleration.
 		if(accel_lim == 0)
@@ -713,7 +695,7 @@ void DoMotorRun2(void)
  	   }
 	   else
 		{
-			stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);
+			stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);
 	   }
 
 	   // We must decelrate at least 1 step to stop.
@@ -754,15 +736,10 @@ void DoMotorRun2(void)
  *  on basis of accel/decel parameters.
  */
 
-
-long tval1;
-long tval2;
-long tval3;
-
-void TIMER32_1_IRQHandler( void )//	__irq
+//	Timer Match Interrupt.
+void TIMER32_1_IRQHandler( void )
 {
 	volatile int i;//voor dummy delay loop
-//	int index;
 	
 	// Holds next delay period.
 	long new_step_delay=0;
@@ -771,6 +748,10 @@ void TIMER32_1_IRQHandler( void )//	__irq
 	
 	// Keep track of remainder from new_step-delay calculation to increase accurancy
 	static long rest = 0;
+	
+	long relativesteps2;
+	long relativesteps;
+	unsigned long accel_lim;
 
   	//reset the int flag
 	if ((LPC_TMR32B1->IR & 1)==1 )
@@ -814,14 +795,10 @@ eval:
 					{
 						//decel_start punt verder leggen
 						//stepstat.decel_start= stepstat.decel_start+(stepstat.newtargetpos-stepstat.targetpos);
-						long accel=stepstat.accel;
-						long decel=stepstat.decel;
-						unsigned int vmax=stepstat.v_max;
-						unsigned long accel_lim;
 
-						long relativesteps=stepstat.newtargetpos-stepstat.currentpos;
+						relativesteps=stepstat.newtargetpos-stepstat.currentpos;
 		 
-		 				accel_lim = ((long long)relativesteps*decel) / (accel+decel);	//	(4000 * 180000) / (5000 + 180000 )
+		 				accel_lim = ((long long)relativesteps*stepstat.decel) / (stepstat.accel+stepstat.decel);	//	(4000 * 180000) / (5000 + 180000 )
 
 					   // Use the limit we hit first to calc decel.
 						if(accel_lim <= stepstat.max_s_lim)
@@ -830,7 +807,7 @@ eval:
 				 	   }
 					   else
 						{
-							stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);
+							stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);
 					   }
 				
 					   // We must decelrate at least 1 step to stop.
@@ -857,14 +834,10 @@ eval:
 					{
 						//decel_start verder leggen
 						//stepstat.decel_start=stepstat.decel_start-(stepstat.newtargetpos-stepstat.targetpos);
-						long accel=stepstat.accel;
-						long decel=stepstat.decel;
-						unsigned int vmax=stepstat.v_max;
-						unsigned long accel_lim;
 
-						long relativesteps=stepstat.currentpos-stepstat.newtargetpos;
+						relativesteps=stepstat.currentpos-stepstat.newtargetpos;
 		 
-		 				accel_lim = ((long long)relativesteps*decel) / (accel+decel);	//	(4000 * 180000) / (5000 + 180000 )
+		 				accel_lim = ((long long)relativesteps*stepstat.decel) / (stepstat.accel+stepstat.decel);	//	(4000 * 180000) / (5000 + 180000 )
 
 					   // Use the limit we hit first to calc decel.
 						if(accel_lim <= stepstat.max_s_lim)
@@ -873,7 +846,7 @@ eval:
 				 	   }
 					   else
 						{
-							stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);
+							stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);
 					   }
 				
 					   // We must decelrate at least 1 step to stop.
@@ -896,7 +869,7 @@ eval:
 				}
 				stepstat.targetpos=stepstat.newtargetpos;
 				break;
-			}
+			} //if (newposrequest)
 			// Check if we should start decelration.
 			if(stepstat.step_count >= stepstat.decel_start || stepstat.stopreq)
 			{
@@ -913,7 +886,6 @@ eval:
 //				long step=stepstat.backlash;
 //   
 //   			// identiek stuk zoals de initiele berekening.
-//				unsigned long accel_lim;
 //				
 //				stepstat.step_count=0;
 //				rest = 0;
@@ -1038,17 +1010,12 @@ eval:
 					if (stepstat.currentpos<stepstat.newtargetpos)
 					{
 						//opnieuw berekenen decel punt en reking houden met reeds afgelegde weg
-						long relativesteps;
-						long accel=stepstat.accel;
-						long decel=stepstat.decel;
-						unsigned int vmax=stepstat.v_max;
 						  
 						//! Number of steps before we must start deceleration (if accel does not hit max speed).
-						unsigned long accel_lim;
 					 						
 						relativesteps=stepstat.newtargetpos-stepstat.currentpos;
 					
-						accel_lim = ((long long)relativesteps*decel) / (accel+decel);	//	(4000 * 180000) / (5000 + 180000 )
+						accel_lim = ((long long)relativesteps*stepstat.decel) / (stepstat.accel+stepstat.decel);	//	(4000 * 180000) / (5000 + 180000 )
 				
 						// We must accelrate at least 1 step before we can start deceleration.
 						if(accel_lim == 0)
@@ -1058,7 +1025,7 @@ eval:
 						if(accel_lim <= stepstat.max_s_lim)
 						   stepstat.decel_val = accel_lim - relativesteps;
 					   else
-							stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);
+							stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);
 				
 					   // We must decelrate at least 1 step to stop.
 					   if(stepstat.decel_val == 0)
@@ -1089,20 +1056,14 @@ eval:
 				{
 					if (stepstat.newtargetpos < stepstat.currentpos)
 					{
-						//dopnieuw berekenen decel punt en reking houden met reeds afgelegde weg
-						long relativesteps;
-			  			long accel=stepstat.accel;
-						long decel=stepstat.decel;
-						unsigned int vmax=stepstat.v_max;
+						//opnieuw berekenen decel punt en reking houden met reeds afgelegde weg
 						  
 						//! Number of steps before we must start deceleration (if accel does not hit max speed).
-						unsigned long accel_lim;
-					 						
+	 						
 						relativesteps=stepstat.currentpos-stepstat.newtargetpos;	 //omgekeerd als bij CW	 rest is hetzelfde
 					
-						accel_lim = ((long long)relativesteps*decel) / (accel+decel);	//	(4000 * 180000) / (5000 + 180000 )
-				
-			  				
+						accel_lim = ((long long)relativesteps*stepstat.decel) / (stepstat.accel+stepstat.decel);	//	(4000 * 180000) / (5000 + 180000 )
+		
 						// We must accelrate at least 1 step before we can start deceleration.
 						if(accel_lim == 0)
 							accel_lim = 1;
@@ -1111,7 +1072,7 @@ eval:
 						if(accel_lim <= stepstat.max_s_lim)
 						   stepstat.decel_val = accel_lim - relativesteps;
 					   else
-							stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);
+							stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);
 				
 					   // We must decelrate at least 1 step to stop.
 					   if(stepstat.decel_val == 0)
@@ -1173,7 +1134,6 @@ eval:
 				rest = (long)((2 * stepstat.step_delay)+rest)%(4 * stepstat.accel_count + 1);
 			}
 
- #define USEV2
 			if(stepstat.newposrequest)
 			{
 				stepstat.newposrequest=FALSE;
@@ -1185,26 +1145,22 @@ eval:
 					if (stepstat.newtargetpos>(1+(stepstat.currentpos - stepstat.accel_count)))	 //accel count is negatief !
 					{
 						//opnieuw berekenen decel punt en reking houden met reeds afgelegde weg
-						long relativesteps=stepstat.newtargetpos-stepstat.currentpos;
-		 				long accel=stepstat.accel;
-						long decel=stepstat.decel;
-						unsigned int vmax=stepstat.v_max;
-						unsigned long accel_lim;
-						long relativesteps2;
+						relativesteps=stepstat.newtargetpos-stepstat.currentpos;
+						//unsigned long accel_lim;
+						
 						  
 						stepstat.accel_count=-stepstat.accel_count;
 						
 #ifdef USEV1		 		  		
-						relativesteps2= relativesteps - stepstat.accel_count + ((stepstat.accel_count * (accel + decel)) / decel);
-						accel_lim = ((long long)relativesteps2*decel) / (accel+decel);
+						relativesteps2= relativesteps - stepstat.accel_count + ((stepstat.accel_count * (stepstat.accel + stepstat.decel)) / stepstat.decel);
 #else
 						//accel_lim= ((long long)relativesteps*decel) / (accel+decel);
 						//accel_lim= relativesteps - accel_lim;
 						//of
 						//accel_lim= ((long long)relativesteps*accel) / (accel+decel);
-						relativesteps2= relativesteps + 	((stepstat.accel_count * decel) /accel);
-						accel_lim = ((long long)relativesteps2*decel) / (accel+decel);
+						relativesteps2= relativesteps + 	((stepstat.accel_count * stepstat.decel) /stepstat.accel);
 #endif						
+						accel_lim = ((long long)relativesteps2*stepstat.decel) / (stepstat.accel+stepstat.decel);
 						// We must accelrate at least 1 step before we can start deceleration.
 						if(accel_lim == 0)
 							accel_lim = 1;
@@ -1221,7 +1177,7 @@ eval:
 						}
 					   else
 						{
-							stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);  //trapezium
+							stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);  //trapezium
 						}
 
 					   // We must decelrate at least 1 step to stop.
@@ -1238,17 +1194,13 @@ eval:
 
 						stepstat.run_state = ACCEL;
 					}
-					else if (stepstat.newtargetpos<(stepstat.currentpos - stepstat.accel_count))
+					else if (stepstat.newtargetpos<(stepstat.currentpos - stepstat.accel_count))	//	OK blijven vertragen en bij het stoppen heberekenen en omkeren
 					// if (stepstat.newtargetpos<=(stepstat.currentpos - stepstat.accel_count))	//	OK blijven vertragen en bij het stoppen heberekenen en omkeren
 					{
 						stepstat.recalc_after_stop=TRUE;
 					}
 //					else
 //					{
-//						 tval1=stepstat.run_state;
-//						 tval2=stepstat.accel_count;
-//						 if(tval2!=0)
-//						 	tval3=12;
 //						 stepstat.run_state = STOP;
 //					}
 				}
@@ -1256,38 +1208,20 @@ eval:
 				{
 					if ((stepstat.newtargetpos)<(stepstat.currentpos + stepstat.accel_count-1))
 					{
-						long relativesteps=stepstat.currentpos-stepstat.newtargetpos;
+						relativesteps=stepstat.currentpos-stepstat.newtargetpos;
 						//opnieuw berekenen decel punt en reking houden met reeds afgelegde weg
-						long accel=stepstat.accel;
-						long decel=stepstat.decel;
-						unsigned int vmax=stepstat.v_max;
-						unsigned long accel_lim;
-						long relativesteps2;
-						  
+												  
 						stepstat.accel_count=-stepstat.accel_count;
 
 #ifdef USEV1
-					   relativesteps2= relativesteps - stepstat.accel_count + ((stepstat.accel_count * (accel + decel)) / decel);
-						accel_lim = ((long long)relativesteps2*decel) / (accel+decel);
+					   relativesteps2= relativesteps - stepstat.accel_count + ((stepstat.accel_count * (stepstat.accel + stepstat.decel)) / stepstat.decel);
 #else
-						relativesteps2= relativesteps + 	((stepstat.accel_count * (long)decel) /accel);
-						accel_lim = ((long long)relativesteps2*decel) / (accel+decel);
+						relativesteps2= relativesteps + 	((stepstat.accel_count * (long)stepstat.decel) /stepstat.accel);
 #endif
-		  				// We must accelrate at least 1 step before we can start deceleration.
+		  				accel_lim = ((long long)relativesteps2*stepstat.decel) / (stepstat.accel+stepstat.decel);
+						// We must accelrate at least 1 step before we can start deceleration.
 						if(accel_lim == 0)
 							accel_lim = 1;
-
-						//tval1=accel_lim;
-						//tval2=relativesteps2;
-						//tval3=relativesteps;
-
-						//tval2= relativesteps + 	((stepstat.accel_count * decel) /accel);
-						//tval2= relativesteps + 	((stepstat.accel_count * (long)decel) /accel);
-						//tval2= relativesteps + 	((long)(stepstat.accel_count * decel) /accel);
-						//tval2= relativesteps + 	((long)(stepstat.accel_count * (long)decel) /(long)accel);	//ok
-						//tval2= relativesteps + 	((stepstat.accel_count * decel) /(long)accel);
-
-
 											
 				      // Use the limit we hit first to calc decel.
 						if(accel_lim <= (stepstat.max_s_lim))
@@ -1301,7 +1235,7 @@ eval:
 						}
 					   else
 						{
-							stepstat.decel_val = - ((stepstat.max_s_lim*accel)/decel);  //trapezium
+							stepstat.decel_val = - ((stepstat.max_s_lim*stepstat.accel)/stepstat.decel);  //trapezium
 						}
 
 					 	// We must decelrate at least 1 step to stop.
@@ -1326,33 +1260,24 @@ eval:
 				stepstat.targetpos=stepstat.newtargetpos;	
 			}
 			//else	//normale gang van zaken
-			// Check if we at last step
+			// Check if we are at last step
 		   {
 				if(stepstat.accel_count >= 0)
 			   {
-					tval1=stepstat.run_state;
-					tval2=stepstat.accel_count;
 					stepstat.run_state = STOP;
 					goto eval;
  			   }
 			}
 		   break;
 	}
- 
- 	stepstat.step_delay = new_step_delay;
-
-	val1=stepstat.step_delay;
-
-	stepstat.toholdpowertimer=TOHOLDPOWERDELAY;  
 
 	if (stepstat.run_state!=STOP)
 	 	LPC_TMR32B1->EMR=EMR_EMC0_CLR;		//clear en re-arm	
 	else
 		LPC_TMR32B1->EMR=0;				 		//clear en disable	
-
-	//VICVectAddr = 0;  			// Acknowledge Interrupt
-
-//	LPC_GPIO2->IC = 0x1; //clear int  ???????????
+	
+	stepstat.step_delay = new_step_delay;
+	stepstat.toholdpowertimer=TOHOLDPOWERDELAY;
 }
 
 
