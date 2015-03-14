@@ -121,7 +121,7 @@ void process_serialdata(char * serial_buffer)
 			printf ("stopping\r\n");
 			StopMotor();
 		}
-		else if (0==strncmp(token,"ma",2))				 // move absolte
+		else if (0==strncmp(token,"ma",2))				 // move absolute
 		{
 			long pos;
 			token = strtok( NULL, seps );
@@ -436,8 +436,6 @@ void StopMotor(void)
 	stepstat.stopreq=TRUE;	
  	while (stepstat.running);
 
-//	stepstat.stopreq=FALSE;	
-
 	//save power
 	Set_MotorPower(HOLDMODE);
 }
@@ -604,24 +602,6 @@ void DoMotorRun(void)
 		}
    }
 
-	/*	{
-		long rest=0;
-
-	 	lut[0]=stepstat.start_step_delay;
-		stepstat.accel_count=0;
-		for (vmax=1;vmax<LUTSIZE;vmax++)
-		{
-			 	stepstat.accel_count++;
-				lut[vmax]= stepstat.step_delay - ((long)((2 * stepstat.step_delay) + rest)/(4 * stepstat.accel_count + 1));
-				rest = (long)((2 * stepstat.step_delay)+rest)%(4 * stepstat.accel_count + 1);
-				stepstat.step_delay=lut[vmax];
-		} *
- 		stepstat.step_delay=stepstat.start_step_delay;
-		stepstat.accel_count=0;
-	}	 */
-
-
-
 	LPC_TMR32B1->TCR=TCR_RUN;		//run
 }
 
@@ -760,7 +740,7 @@ void TIMER32_1_IRQHandler( void )
 	if(stepstat.step_delay>stepstat.start_step_delay)
 		stepstat.step_delay=stepstat.start_step_delay;
 	
-	//the next delay is setup in advance in the matct register
+	//the next delay is setup in advance in the match register
 	LPC_TMR32B1->MR0= stepstat.step_delay;
 
 eval:
